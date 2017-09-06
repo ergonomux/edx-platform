@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 
 def get_edx_api_data(api_config, resource, api, resource_id=None, querystring=None, cache_key=None, many=True,
-                     traverse_pagination=True):
+                     traverse_pagination=True, fields=None):
     """GET data from an edX REST API.
 
     DRY utility for handling caching and pagination.
@@ -59,7 +59,17 @@ def get_edx_api_data(api_config, resource, api, resource_id=None, querystring=No
         response = endpoint(resource_id).get(**querystring)
 
         if resource_id is not None:
-            results = response
+            if fields:
+                results = {}
+                for field in fields:
+                    try:
+                        results[field] = response[fields]
+                    # TODO: Determine what exception would be raised here if response does not have the specified field
+                    except:
+                        msg = '{resource} does not have the attribute {field}'.format(resource, field)
+                        log.exception(msg)
+            else:
+                results = response
         elif traverse_pagination:
             results = _traverse_pagination(response, endpoint, querystring, no_data)
         else:

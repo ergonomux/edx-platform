@@ -39,6 +39,7 @@ from courseware.access import has_access
 from courseware.courses import get_course_by_id
 from edxmako.shortcuts import render_to_response
 from edxmako.template import Template
+from openedx.core.djangoapps.catalog.utils import get_course_run_details
 from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
 from openedx.core.lib.courses import course_image_url
 from openedx.core.djangoapps.certificates.api import display_date_for_certificate
@@ -224,7 +225,7 @@ def _update_context_with_basic_info(context, course_id, platform_name, configura
     )
 
 
-def _update_course_context(request, context, course, platform_name):
+def _update_course_context(request, context, course, course_key, platform_name):
     """
     Updates context dictionary with course info.
     """
@@ -248,6 +249,10 @@ def _update_course_context(request, context, course, platform_name):
                                                               '{partner_short_name}.').format(
             partner_short_name=context['organization_short_name'],
             platform_name=platform_name)
+    fields = ['start', 'end', 'max_effort', 'language']
+    course_run_data = get_course_run_details(course_key, fields)
+    for field in fields:
+        context[field] = course_run_data[field]
 
 
 def _update_social_context(request, context, course, user, user_certificate, platform_name):
@@ -413,7 +418,7 @@ def _render_certificate_template(request, context, course, user_certificate):
     Picks appropriate certificate templates and renders it.
     """
     if settings.FEATURES.get('CUSTOM_CERTIFICATE_TEMPLATES_ENABLED', False):
-        custom_template = get_certificate_template(course.id, user_certificate.mode)
+        custom_template = get_certificate_template(course.id, user_certificate.mode, context['language'])
         if custom_template:
             template = Template(
                 custom_template,
@@ -571,7 +576,7 @@ def render_html_view(request, user_id, course_id):
     _update_organization_context(context, course)
 
     # Append course info
-    _update_course_context(request, context, course, platform_name)
+    _update_course_context(request, context, course, course_key, platform_name)
 
     # Append user info
     _update_context_with_user_info(context, user, user_certificate)
