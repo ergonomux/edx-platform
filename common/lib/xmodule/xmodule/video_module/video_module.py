@@ -658,11 +658,13 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
                 ele.set('src', self.transcripts[transcript_language])
                 xml.append(ele)
 
-        if self.edx_video_id and edxval_api:
+        if edxval_api:
+            external, video_id = get_video_with_transcript_available(self)
             try:
                 xml.append(edxval_api.export_to_xml(
-                    self.edx_video_id,
-                    unicode(self.runtime.course_id.for_branch(None)))
+                    video_id,
+                    unicode(self.runtime.course_id.for_branch(None))),
+                    external=external
                 )
             except edxval_api.ValVideoNotFoundError:
                 pass
@@ -863,16 +865,14 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
             field_data['download_track'] = True
 
         video_asset_elem = xml.find('video_asset')
-        if (
-                edxval_api and
-                video_asset_elem is not None and
-                'edx_video_id' in field_data
-        ):
+        if edxval_api and video_asset_elem is not None:
+            external, video_id = get_video_with_transcript_available(self)
             # Allow ValCannotCreateError to escape
             edxval_api.import_from_xml(
                 video_asset_elem,
-                field_data['edx_video_id'],
-                course_id=course_id
+                video_id,
+                course_id=course_id,
+                external=external
             )
 
         # load license if it exists
