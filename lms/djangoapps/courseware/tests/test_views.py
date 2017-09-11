@@ -1222,7 +1222,7 @@ class ProgressPageBaseTests(ModuleStoreTestCase):
             start=datetime(2013, 9, 16, 7, 17, 28),
             grade_cutoffs={u'çü†øƒƒ': 0.75, 'Pass': 0.5},
             end=datetime.now(),
-            certificate_available_date=datetime.now(),
+            certificate_available_date=datetime.now(UTC),
             **options
         )
 
@@ -1452,7 +1452,7 @@ class ProgressPageTests(ProgressPageBaseTests):
         """Test that query counts remain the same for self-paced and instructor-paced courses."""
         SelfPacedConfiguration(enabled=self_paced_enabled).save()
         self.setup_course(self_paced=self_paced)
-        with self.assertNumQueries(43, table_blacklist=QUERY_COUNT_TABLE_BLACKLIST), check_mongo_calls(2):
+        with self.assertNumQueries(43, table_blacklist=QUERY_COUNT_TABLE_BLACKLIST), check_mongo_calls(1):
             self._get_progress_page()
 
     @ddt.data(
@@ -1465,14 +1465,14 @@ class ProgressPageTests(ProgressPageBaseTests):
         with grades_waffle().override(ASSUME_ZERO_GRADE_IF_ABSENT, active=enable_waffle):
             with self.assertNumQueries(
                 initial, table_blacklist=QUERY_COUNT_TABLE_BLACKLIST
-            ), check_mongo_calls(2):
+            ), check_mongo_calls(1):
                 self._get_progress_page()
 
             # subsequent accesses to the progress page require fewer queries.
             for _ in range(2):
                 with self.assertNumQueries(
                     subsequent, table_blacklist=QUERY_COUNT_TABLE_BLACKLIST
-                ), check_mongo_calls(2):
+                ), check_mongo_calls(1):
                     self._get_progress_page()
 
     @patch(
@@ -1585,7 +1585,7 @@ class ProgressPageTests(ProgressPageBaseTests):
             u'You are enrolled in the audit track for this course. The audit track does not include a certificate.'
         )
 
-    @patch('courseware.views.views.is_course_passed', PropertyMock(return_value=True))
+    @patch('openedx.core.djangoapps.certificates.api.is_course_passed', PropertyMock(return_value=True))
     def test_invalidated_cert_data(self):
         """
         Verify that invalidated cert data is returned if cert is invalidated.
@@ -1604,7 +1604,7 @@ class ProgressPageTests(ProgressPageBaseTests):
         self.assertEqual(response.cert_status, 'invalidated')
         self.assertEqual(response.title, 'Your certificate has been invalidated')
 
-    @patch('courseware.views.views.is_course_passed', PropertyMock(return_value=True))
+    @patch('openedx.core.djangoapps.certificates.api.is_course_passed', PropertyMock(return_value=True))
     def test_downloadable_get_cert_data(self):
         """
         Verify that downloadable cert data is returned if cert is downloadable.
@@ -1619,7 +1619,7 @@ class ProgressPageTests(ProgressPageBaseTests):
         self.assertEqual(response.cert_status, 'downloadable')
         self.assertEqual(response.title, 'Your certificate is available')
 
-    @patch('courseware.views.views.is_course_passed', PropertyMock(return_value=True))
+    @patch('openedx.core.djangoapps.certificates.api.is_course_passed', PropertyMock(return_value=True))
     def test_generating_get_cert_data(self):
         """
         Verify that generating cert data is returned if cert is generating.
@@ -1634,7 +1634,7 @@ class ProgressPageTests(ProgressPageBaseTests):
         self.assertEqual(response.cert_status, 'generating')
         self.assertEqual(response.title, "We're working on it...")
 
-    @patch('courseware.views.views.is_course_passed', PropertyMock(return_value=True))
+    @patch('openedx.core.djangoapps.certificates.api.is_course_passed', PropertyMock(return_value=True))
     def test_unverified_get_cert_data(self):
         """
         Verify that unverified cert data is returned if cert is unverified.
@@ -1649,7 +1649,7 @@ class ProgressPageTests(ProgressPageBaseTests):
         self.assertEqual(response.cert_status, 'unverified')
         self.assertEqual(response.title, "Certificate unavailable")
 
-    @patch('courseware.views.views.is_course_passed', PropertyMock(return_value=True))
+    @patch('openedx.core.djangoapps.certificates.api.is_course_passed', PropertyMock(return_value=True))
     def test_request_get_cert_data(self):
         """
         Verify that requested cert data is returned if cert is to be requested.

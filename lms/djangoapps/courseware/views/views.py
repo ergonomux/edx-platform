@@ -71,13 +71,14 @@ from markupsafe import escape
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey, UsageKey
 from openedx.core.djangoapps.catalog.utils import get_programs, get_programs_with_type
+from openedx.core.djangoapps.certificates import api as auto_certs_api
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 from openedx.core.djangoapps.credit.api import (
     get_credit_requirement_status,
     is_credit_course,
     is_user_eligible_for_credit
 )
-from openedx.core.djangoapps.certificates.config import waffle as certificates_waffle
+from openedx.core.djangoapps.certificates import api as auto_certs_api
 from openedx.core.djangoapps.models.course_details import CourseDetails
 from openedx.core.djangoapps.monitoring_utils import set_custom_metrics_for_course_key
 from openedx.core.djangoapps.plugin_api.views import EdxFragmentView
@@ -917,8 +918,6 @@ def _get_cert_data(student, course, course_key, is_active, enrollment_mode, grad
     Returns:
         returns dict if course certificate is available else None.
     """
-    from lms.djangoapps.courseware.courses import get_course_by_id
-
     if not CourseMode.is_eligible_for_certificate(enrollment_mode):
         return CertData(
             CertificateStatuses.audit_passing,
@@ -928,26 +927,11 @@ def _get_cert_data(student, course, course_key, is_active, enrollment_mode, grad
             cert_web_view_url=None
         )
 
-    may_view_certificate = False
-    if course_key:
-        may_view_certificate = get_course_by_id(course_key).may_certify()
+    if not (auto_certs_api.auto_certificate_generation_enabled() or certs_api.cert_generation_enabled(course_key)):
+        return
 
-    switches = certificates_waffle.waffle()
-    switch_enabled = switches.is_enabled(certificates_waffle.AUTO_CERTIFICATE_GENERATION)
-    student_cert_generation_enabled = switch_enabled or certs_api.cert_generation_enabled(course_key)
-
-    # Don't show certificate information if:
-    # 1) the learner has not passed the course
-    # 2) the course is not active
-    # 3) auto-generated certs flags are not enabled, but student cert generation is not enabled either
-    # 4) the learner may not view the certificate, based on the course's advanced course settings.
-    if not all([
-        is_course_passed(course, grade_summary),
-        is_active,
-        student_cert_generation_enabled,
-        may_view_certificate
-    ]):
-        return None
+    if not auto_certs_api.can_show_certificate_message(course, student):
+        return
 
     if certs_api.is_certificate_invalid(student, course_key):
         return CertData(
@@ -957,6 +941,12 @@ def _get_cert_data(student, course, course_key, is_active, enrollment_mode, grad
             download_url=None,
             cert_web_view_url=None
         )
+
+    if grade_summary is None:
+        grade_summary = CourseGradeFactory().create(student, course).summary
+
+    if not auto_certs_api.is_course_passed(course, grade_summary):
+        return
 
     cert_downloadable_status = certs_api.certificate_downloadable_status(student, course_key)
 
@@ -972,7 +962,7 @@ def _get_cert_data(student, course, course_key, is_active, enrollment_mode, grad
     )
 
     if cert_downloadable_status['is_downloadable']:
-        if certs_api.has_html_certificates_enabled(course_key, course):
+        if certs_api.has_html_certificates_enabled(course):
             if certs_api.get_active_web_certificate(course) is not None:
                 return CertData(
                     CertificateStatuses.downloadable,

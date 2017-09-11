@@ -46,8 +46,7 @@ from student.models import LinkedInAddToProfileConfiguration
 from util import organizations_helpers as organization_api
 from util.date_utils import strftime_localized
 from util.views import handle_500
-from xmodule.modulestore.django import modulestore
-from xmodule.modulestore.exceptions import ItemNotFoundError
+
 
 log = logging.getLogger(__name__)
 
@@ -516,28 +515,28 @@ def render_html_view(request, user_id, course_id):
     _update_context_with_basic_info(context, course_id, platform_name, configuration)
     invalid_template_path = 'certificates/invalid.html'
 
-    # Kick the user back to the "Invalid" screen if the feature is disabled
-    if not has_html_certificates_enabled(course_id):
-        log.info(
-            "Invalid cert: HTML certificates disabled for %s. User id: %d",
-            course_id,
-            user_id,
-        )
-        return render_to_response(invalid_template_path, context)
-
     # Load the course and user objects
     try:
         course_key = CourseKey.from_string(course_id)
         user = User.objects.get(id=user_id)
-        course = modulestore().get_course(course_key)
+        course = get_course_by_id(course_key)
 
-    # For any other expected exceptions, kick the user back to the "Invalid" screen
-    except (InvalidKeyError, ItemNotFoundError, User.DoesNotExist) as exception:
+    # For any course or user exceptions, kick the user back to the "Invalid" screen
+    except (InvalidKeyError, User.DoesNotExist, Http404) as exception:
         error_str = (
             "Invalid cert: error finding course %s or user with id "
             "%d. Specific error: %s"
         )
         log.info(error_str, course_id, user_id, str(exception))
+        return render_to_response(invalid_template_path, context)
+
+    # Kick the user back to the "Invalid" screen if the feature is disabled
+    if not has_html_certificates_enabled(course):
+        log.info(
+            "Invalid cert: HTML certificates disabled for %s. User id: %d",
+            course_id,
+            user_id,
+        )
         return render_to_response(invalid_template_path, context)
 
     # Load user's certificate
