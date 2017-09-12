@@ -8,6 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.http import Http404
 from django.shortcuts import render_to_response
+from django.utils.translation import ugettext as _
 from django.views.decorators.http import require_http_methods
 from django_countries import countries
 from edxmako.shortcuts import marketing_link
@@ -15,9 +16,11 @@ from openedx.core.djangoapps.site_configuration import helpers as configuration_
 from openedx.core.djangoapps.user_api.accounts.api import get_account_settings
 from openedx.core.djangoapps.user_api.errors import UserNotAuthorized, UserNotFound
 from openedx.core.djangoapps.user_api.preferences.api import get_user_preferences
+from openedx.core.djangoapps.util.user_messages import PageLevelMessages
+from openedx.core.djangolib.markup import HTML, Text
 from student.models import User
 
-from .. import SHOW_ACHIEVEMENTS_FLAG
+from .. import SHOW_ACHIEVEMENTS_FLAG, BOOST_PROFILE_VISIBILITY
 
 from learner_achievements import LearnerAchievementsFragmentView
 
@@ -82,6 +85,14 @@ def learner_profile_context(request, profile_username, user_is_staff):
         )
     else:
         achievements_fragment = None
+
+    if own_profile and BOOST_PROFILE_VISIBILITY.is_enabled():
+        PageLevelMessages.register_info_message(
+            request,
+            Text(_("We have been adding more information to the full version of your learner profile, including your full name, social profile links, join date and certificates. If you are uncomfortable sharing this information publicly, feel free to toggle your profile visibility to 'Limited'. {dismiss_link}")).format(
+                dismiss_link=HTML('<button class="btn-link dismiss-info-message">Dismiss</button>')
+            )
+        )
 
     context = {
         'own_profile': own_profile,
