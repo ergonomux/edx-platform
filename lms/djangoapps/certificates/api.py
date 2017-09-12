@@ -494,39 +494,67 @@ def get_certificate_template(course_key, mode):
     if course_organization:
         org_id = course_organization[0]['id']
 
-    if org_id and mode:
-        template = CertificateTemplate.objects.filter(
-            organization_id=org_id,
-            course_key=course_key,
-            mode=mode,
-            is_active=True
-        )
-    # if don't template find by org and mode
-    if not template and org_id and mode:
-        template = CertificateTemplate.objects.filter(
-            organization_id=org_id,
-            course_key=CourseKeyField.Empty,
-            mode=mode,
-            is_active=True
-        )
-    # if don't template find by only org
-    if not template and org_id:
-        template = CertificateTemplate.objects.filter(
-            organization_id=org_id,
-            course_key=CourseKeyField.Empty,
-            mode=None,
-            is_active=True
-        )
-    # if we still don't template find by only course mode
-    if not template and mode:
-        template = CertificateTemplate.objects.filter(
-            organization_id=None,
-            course_key=CourseKeyField.Empty,
-            mode=mode,
-            is_active=True
-        )
+    active_templates = CertificateTemplate.objects.filter(is_active=True)
 
-    return template[0].template if template else None
+    org_and_mode_templates = active_templates.filter(
+        organization_id=org_id,
+        mode=mode,
+    )  
+
+    template_by_key = org_and_mode_templates.filter(course_key=course_key)
+    # if theres a course key and all deets template return it
+    if template_by_key
+        return template_by_key[0].template
+     
+    # no template by key, check org and mode templates
+    elif org_and_mode_templates
+        return org_and_mode_templates[0].template
+
+    # if no template with org and mode, find by only org
+    org_templates = active_templates.filter(organization_id=org_id)
+    elif org_templates
+        return org_templates[0].template
+    
+    # if we still don't template find by only course mode
+    mode_templates = active_templates.filter(mode=mode)
+    elif mode_templates
+        return mode_templates[0].template
+
+    else 
+        return None
+    # if org_id and mode:
+    #     template = CertificateTemplate.objects.filter(
+    #         organization_id=org_id,
+    #         course_key=course_key,
+    #         mode=mode,
+    #         is_active=True
+    #     )
+    # # if don't template find by org and mode
+    # if not template and org_id and mode:
+    #     template = CertificateTemplate.objects.filter(
+    #         organization_id=org_id,
+    #         course_key=CourseKeyField.Empty,
+    #         mode=mode,
+    #         is_active=True
+    #     )
+    # # if don't template find by only org
+    # if not template and org_id:
+    #     template = CertificateTemplate.objects.filter(
+    #         organization_id=org_id,
+    #         course_key=CourseKeyField.Empty,
+    #         mode=None,
+    #         is_active=True
+    #     )
+    # # if we still don't template find by only course mode
+    # if not template and mode:
+    #     template = CertificateTemplate.objects.filter(
+    #         organization_id=None,
+    #         course_key=CourseKeyField.Empty,
+    #         mode=mode,
+    #         is_active=True
+    #     )
+
+    # return template[0].template if template else None
 
 
 def emit_certificate_event(event_name, user, course_id, course=None, event_data=None):
