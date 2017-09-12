@@ -496,6 +496,8 @@ def get_certificate_template(course_key, mode):
 
     active_templates = CertificateTemplate.objects.filter(is_active=True)
 
+    if 
+
     org_and_mode_templates = active_templates.filter(
         organization_id=org_id,
         mode=mode,
