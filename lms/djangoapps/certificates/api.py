@@ -496,7 +496,10 @@ def get_certificate_template(course_key, mode):
 
     active_templates = CertificateTemplate.objects.filter(is_active=True)
 
-    if 
+    #if language specific templates enabled at site level
+    #if CertificateGenerationCourseSetting.is_language_specific_templates_enabled(course_key)
+        # course_language = get_language_for_course_by_key(course_key)
+        # active_templates = active_templates.filter(language=course_language)
 
     org_and_mode_templates = active_templates.filter(
         organization_id=org_id,
