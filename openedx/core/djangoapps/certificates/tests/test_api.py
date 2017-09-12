@@ -1,9 +1,9 @@
 from contextlib import contextmanager
 import itertools
-from unittest import TestCase
 
 import ddt
 import waffle
+from django.test import TestCase
 
 from openedx.core.djangoapps.certificates import api
 from openedx.core.djangoapps.certificates.config import waffle as certs_waffle
