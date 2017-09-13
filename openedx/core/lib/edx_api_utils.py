@@ -15,6 +15,18 @@ from openedx.core.lib.token_utils import JwtBuilder
 log = logging.getLogger(__name__)
 
 
+def get_fields(fields, response):
+    """Extracts desired fields from the API response"""
+    results = {}
+    for field in fields:
+        try:
+            results[field] = response[field]
+        # TODO: Determine what exception would be raised here if response does not have the specified field
+        except:
+            msg = '{resource} does not have the attribute {field}'.format(resource, field)
+            log.exception(msg)
+
+
 def get_edx_api_data(api_config, resource, api, resource_id=None, querystring=None, cache_key=None, many=True,
                      traverse_pagination=True, fields=None):
     """GET data from an edX REST API.
@@ -60,14 +72,7 @@ def get_edx_api_data(api_config, resource, api, resource_id=None, querystring=No
 
         if resource_id is not None:
             if fields:
-                results = {}
-                for field in fields:
-                    try:
-                        results[field] = response[fields]
-                    # TODO: Determine what exception would be raised here if response does not have the specified field
-                    except:
-                        msg = '{resource} does not have the attribute {field}'.format(resource, field)
-                        log.exception(msg)
+                results = get_fields(fields, response)
             else:
                 results = response
         elif traverse_pagination:

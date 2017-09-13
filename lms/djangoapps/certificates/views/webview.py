@@ -251,8 +251,7 @@ def _update_course_context(request, context, course, course_key, platform_name):
             platform_name=platform_name)
     fields = ['start', 'end', 'max_effort', 'language']
     course_run_data = get_course_run_details(course_key, fields)
-    for field in fields:
-        context[field] = course_run_data[field]
+    context.update(course_run_data)
 
 
 def _update_social_context(request, context, course, user, user_certificate, platform_name):
