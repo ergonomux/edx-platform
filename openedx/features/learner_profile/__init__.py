@@ -13,4 +13,5 @@ WAFFLE_FLAG_NAMESPACE = WaffleFlagNamespace(name='learner_profile')
 SHOW_ACHIEVEMENTS_FLAG = WaffleFlag(WAFFLE_FLAG_NAMESPACE, 'show_achievements')
 
 # Waffle flag for increasing the visibility of the profile page, including all messaging necessary to show it.
+# TODO: LEARNER-2554: 09/2017: Remove flag once message is no longer needed.
 BOOST_PROFILE_VISIBILITY = WaffleFlag(WAFFLE_FLAG_NAMESPACE, 'boost_visibility')

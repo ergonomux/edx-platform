@@ -46,13 +46,19 @@ def learner_profile(request, username):
     """
     try:
         context = learner_profile_context(request, username, request.user.is_staff)
+        # TODO: LEARNER-2554: 09/2017: Remove message and cookie logic when we no longer want this message
         dismiss_message = False
-        if context['own_profile'] and BOOST_PROFILE_VISIBILITY.is_enabled() and request.COOKIES.get('dismiss-profile-message', '') != 'True':
+        if (context['own_profile'] and
+                BOOST_PROFILE_VISIBILITY.is_enabled() and
+                request.COOKIES.get('dismiss-profile-message', '') != 'True'):
             PageLevelMessages.register_info_message(
                 request,
-                Text(_("We have been adding more information to the full version of your learner profile, including your full name, social profile links, join date and certificates. If you are uncomfortable sharing this information publicly, feel free to toggle your profile visibility to 'Limited'. {dismiss_link}")).format(
-                    dismiss_link=HTML('<button class="btn-link dismiss-info-message">Dismiss</button>')
-                )
+                Text(_("We have been adding more information to the full version of your learner profile, \
+                        including your full name, social profile links, join date and certificates. If you \
+                        are uncomfortable sharing this information publicly, feel free to toggle your profile \
+                        visibility to 'Limited'. {dismiss_link}")).format(
+                            dismiss_link=HTML('<button class="btn-link dismiss-info-message">Dismiss</button>')
+                        )
             )
             dismiss_message = True
         response = render_to_response(
