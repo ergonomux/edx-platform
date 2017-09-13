@@ -192,7 +192,7 @@ def _get_mongo_where_operator_parameters_for_other():
 def _get_mongo_where_operator_parameters_for_filters(requested_filter):
 
     requested_file_types = _get_requested_file_types_from_request(requested_filter)
-    file_extensions_for_request_file_types = _get_extensions_for_file_types(requested_file_types)
+    file_extensions_for_requested_file_types = _get_extensions_for_file_types(requested_file_types)
     javascript_expressions_to_filter_extensions = _get_javascript_expressions_to_filter_extensions_with_operator(file_extensions_for_requested_file_types, "==")
     javascript_expressions_to_filter_extensions_in_mongo = _get_javascript_expressions_for_mongo_filter_with_separator(javascript_expressions_to_filter_extensions, ' || ')
 
