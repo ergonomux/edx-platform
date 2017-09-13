@@ -38,6 +38,7 @@ request_defaults = {
     'asset_type': ''
 }
 
+
 @login_required
 @ensure_csrf_cookie
 def assets_handler(request, course_key_string=None, asset_key_string=None):
@@ -77,9 +78,11 @@ def assets_handler(request, course_key_string=None, asset_key_string=None):
     else:
         return HttpResponseNotFound()
 
+
 def _get_request_response_format(request):
 
     return request.GET.get('format') or request.POST.get('format') or 'html'
+
 
 def _check_request_response_format_is_json(request, response_format):
 
@@ -136,7 +139,6 @@ def _assets_json(request, course_key):
         _update_options_to_requery_final_page(query_options, total_count)
         first_asset_to_display_index = _get_first_asset_index(current_page, requested_page_size)
         assets, total_count = _get_assets_for_page(request, course_key, query_options)
-
 
     last_asset_to_display_index = first_asset_to_display_index + len(assets)
     assets_in_json_format = _get_assets_in_json_format(assets, course_key)
@@ -223,7 +225,7 @@ def _get_extensions_for_file_types(requested_file_types):
 def _get_javascript_expressions_to_filter_extensions_with_operator(file_extensions, operator):
 
     return ["JSON.stringify(this.contentType).toUpperCase() " + operator + " JSON.stringify('{}').toUpperCase()".format(
-                    file_extension) for file_extension in file_extensions]
+        file_extension) for file_extension in file_extensions]
 
 
 def _get_javascript_expressions_for_mongo_filter_with_separator(javascript_expressions_for_mongo_filtering, separator):
@@ -284,7 +286,7 @@ def _get_assets_for_page(request, course_key, options):
 
 def _update_options_to_requery_final_page(query_options, total_asset_count):
 
-    query_options['current_page'] = int(math.floor((total_asset_count -1) / query_options['page_size']))
+    query_options['current_page'] = int(math.floor((total_asset_count - 1) / query_options['page_size']))
 
 
 def _get_assets_in_json_format(assets, course_key):
@@ -397,7 +399,7 @@ def _check_upload_file_size(file_metadata):
 
     if upload_file_size > maximum_file_size_in_bytes:
         error_message = _get_file_too_large_error_message(filename)
-        return JsonResponse({'error' : error_message}, status = 413)
+        return JsonResponse({'error': error_message}, status=413)
 
 
 def _get_file_too_large_error_message(filename):
@@ -496,6 +498,7 @@ def delete_asset(course_key, asset_key):
     _delete_thumbnail(content.thumbnail_location, course_key, asset_key)
     contentstore().delete(content.get_id())
     del_cached_content(content.location)
+
 
 def _check_existence_and_get_asset_content(asset_key):
 
