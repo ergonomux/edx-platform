@@ -42,7 +42,7 @@ from xmodule.xml_module import deserialize_field, is_pointer_tag, name_to_pathna
 
 from .bumper_utils import bumperize
 from .transcripts_utils import (
-    Transcript, VideoTranscriptsMixin, get_html5_ids, get_video_ids_info, NoVideoIdFoundError
+    Transcript, VideoTranscriptsMixin, get_html5_ids, get_video_ids_info
 )
 from .video_handlers import VideoStudentViewHandlers, VideoStudioViewHandlers
 from .video_utils import create_youtube_string, format_xml_exception_message, get_poster, rewrite_video_url
@@ -665,17 +665,18 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
                 xml.append(ele)
 
         if edxval_api:
-            try:
-                external, video_id = get_video_ids_info(self.edx_video_id, self.youtube_id_1_0, self.html5_sources)
-                xml.append(
-                    edxval_api.export_to_xml(
-                        video_id,
-                        unicode(self.runtime.course_id.for_branch(None)),
-                        external=external
+            external, video_ids = get_video_ids_info(self.edx_video_id, self.youtube_id_1_0, self.html5_sources)
+            if video_ids:
+                try:
+                    xml.append(
+                        edxval_api.export_to_xml(
+                            video_ids,
+                            unicode(self.runtime.course_id.for_branch(None)),
+                            external=external
+                        )
                     )
-                )
-            except edxval_api.ValVideoNotFoundError, NoVideoIdFoundError:
-                pass
+                except edxval_api.ValVideoNotFoundError:
+                    pass
 
         # handle license specifically
         self.add_license_to_xml(xml)

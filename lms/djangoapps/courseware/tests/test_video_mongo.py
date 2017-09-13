@@ -1443,7 +1443,7 @@ class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
             provider='Cielo24',
             file_format='srt',
         )
-        self.get_video_transcript_data = lambda video_id : dict(video_transcript_data, **{'video_id': video_id})
+        self.get_video_transcript_data = lambda video_id: dict(video_transcript_data, **{'video_id': video_id})
 
     def test_get_context(self):
         """"
@@ -1538,6 +1538,20 @@ class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
         self.descriptor.edx_video_id = 'nonexistent'
         actual = self.descriptor.definition_to_xml(resource_fs=None)
         expected_str = """<video download_video="false" url_name="SampleProblem"/>"""
+        parser = etree.XMLParser(remove_blank_text=True)
+        expected = etree.XML(expected_str, parser=parser)
+        self.assertXmlEqual(expected, actual)
+
+    @patch('xmodule.video_module.transcripts_utils.get_video_ids_info')
+    def test_export_no_video_ids(self, mock_get_video_ids_info):
+        """
+        Tests export when there are no video ids
+        """
+        mock_get_video_ids_info.return_value = True, []
+
+        actual = self.descriptor.definition_to_xml(resource_fs=None)
+        expected_str = '<video url_name="SampleProblem" download_video="false"><video_asset/></video>'
+
         parser = etree.XMLParser(remove_blank_text=True)
         expected = etree.XML(expected_str, parser=parser)
         self.assertXmlEqual(expected, actual)
