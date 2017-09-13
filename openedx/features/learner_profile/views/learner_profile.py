@@ -45,10 +45,24 @@ def learner_profile(request, username):
         GET /account/profile
     """
     try:
-        return render_to_response(
+        context = learner_profile_context(request, username, request.user.is_staff)
+        dismiss_message = False
+        if context['own_profile'] and BOOST_PROFILE_VISIBILITY.is_enabled() and request.COOKIES.get('dismiss-profile-message', '') != 'True':
+            PageLevelMessages.register_info_message(
+                request,
+                Text(_("We have been adding more information to the full version of your learner profile, including your full name, social profile links, join date and certificates. If you are uncomfortable sharing this information publicly, feel free to toggle your profile visibility to 'Limited'. {dismiss_link}")).format(
+                    dismiss_link=HTML('<button class="btn-link dismiss-info-message">Dismiss</button>')
+                )
+            )
+            dismiss_message = True
+        response = render_to_response(
             'learner_profile/learner_profile.html',
-            learner_profile_context(request, username, request.user.is_staff)
+            context
         )
+
+        if dismiss_message:
+            response.set_cookie('dismiss-profile-message', 'True')
+        return response
     except (UserNotAuthorized, UserNotFound, ObjectDoesNotExist):
         raise Http404
 
@@ -86,13 +100,6 @@ def learner_profile_context(request, profile_username, user_is_staff):
     else:
         achievements_fragment = None
 
-    if own_profile and BOOST_PROFILE_VISIBILITY.is_enabled():
-        PageLevelMessages.register_info_message(
-            request,
-            Text(_("We have been adding more information to the full version of your learner profile, including your full name, social profile links, join date and certificates. If you are uncomfortable sharing this information publicly, feel free to toggle your profile visibility to 'Limited'. {dismiss_link}")).format(
-                dismiss_link=HTML('<button class="btn-link dismiss-info-message">Dismiss</button>')
-            )
-        )
 
     context = {
         'own_profile': own_profile,
