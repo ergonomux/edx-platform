@@ -57,8 +57,8 @@ def learner_profile(request, username):
                         including your full name, social profile links, join date and certificates. If you \
                         are uncomfortable sharing this information publicly, feel free to toggle your profile \
                         visibility to 'Limited'. {dismiss_link}")).format(
-                            dismiss_link=HTML('<button class="btn-link dismiss-info-message">Dismiss</button>')
-                        )
+                    dismiss_link=HTML('<button class="btn-link dismiss-info-message">Dismiss</button>')
+                )
             )
             dismiss_message = True
         response = render_to_response(
@@ -105,7 +105,6 @@ def learner_profile_context(request, profile_username, user_is_staff):
         )
     else:
         achievements_fragment = None
-
 
     context = {
         'own_profile': own_profile,
