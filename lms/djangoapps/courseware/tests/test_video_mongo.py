@@ -9,7 +9,15 @@ import ddt
 from django.conf import settings
 from django.test import TestCase
 from django.test.utils import override_settings
-from edxval.api import ValCannotCreateError, ValVideoNotFoundError, create_profile, create_video, get_video_info
+from edxval.api import (
+    ValCannotCreateError,
+    ValVideoNotFoundError,
+    create_profile,
+    create_video,
+    get_video_info,
+    create_or_update_video_transcript,
+    get_video_transcript,
+)
 from lxml import etree
 from mock import MagicMock, Mock, patch
 from nose.plugins.attrib import attr
@@ -1428,6 +1436,15 @@ class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
         self.descriptor.runtime.handler_url = MagicMock()
         self.descriptor.runtime.course_id = MagicMock()
 
+        video_transcript_data = dict(
+            video_id='',
+            language_code='ar',
+            transcript='ext101.srt',
+            provider='Cielo24',
+            file_format='srt',
+        )
+        self.get_video_transcript_data = lambda video_id : dict(video_transcript_data, **{'video_id': video_id})
+
     def test_get_context(self):
         """"
         Test get_context.
@@ -1455,8 +1472,7 @@ class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
             self.descriptor.editable_metadata_fields['edx_video_id']
         )
 
-    @patch('xmodule.video_module.video_module.get_video_with_transcript_available')
-    def test_export_val_data(self, mock_get_video_with_transcript_available):
+    def test_export_val_data_with_internal(self):
         self.descriptor.edx_video_id = 'test_edx_video_id'
         create_profile('mobile')
         create_video({
@@ -1471,16 +1487,49 @@ class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
                 'bitrate': 333,
             }],
         })
-        mock_get_video_with_transcript_available.return_value = (False, self.descriptor.edx_video_id)
+        create_or_update_video_transcript(
+            video_id=self.descriptor.edx_video_id,
+            language_code='ar',
+            file_name='ext101.srt',
+            file_format='srt',
+            provider='Cielo24',
+        )
 
         actual = self.descriptor.definition_to_xml(resource_fs=None)
         expected_str = """
             <video download_video="false" url_name="SampleProblem">
                 <video_asset client_video_id="test_client_video_id" duration="111.0" image="">
                     <encoded_video profile="mobile" url="http://example.com/video" file_size="222" bitrate="333"/>
+                    <transcripts video-id="{video_id}">
+                        <transcript file_format="srt" file_name="ext101.srt" language_code="ar" provider="Cielo24"/>
+                    </transcripts>
                 </video_asset>
             </video>
-        """
+        """.format(video_id=self.descriptor.edx_video_id)
+        parser = etree.XMLParser(remove_blank_text=True)
+        expected = etree.XML(expected_str, parser=parser)
+        self.assertXmlEqual(expected, actual)
+
+    def test_export_val_data_with_external(self):
+        external_video_id = '3_yD_cEKoCk'
+        create_or_update_video_transcript(
+            video_id=external_video_id,
+            language_code='ar',
+            file_name='ext101.srt',
+            file_format='srt',
+            provider='Cielo24',
+        )
+
+        actual = self.descriptor.definition_to_xml(resource_fs=None)
+        expected_str = """
+            <video url_name="SampleProblem" download_video="false">
+                <video_asset>
+                    <transcripts video-id="{video_id}">
+                        <transcript file_format="srt" file_name="ext101.srt" language_code="ar" provider="Cielo24" />
+                    </transcripts>
+                </video_asset>
+            </video>
+        """.format(video_id=external_video_id)
         parser = etree.XMLParser(remove_blank_text=True)
         expected = etree.XML(expected_str, parser=parser)
         self.assertXmlEqual(expected, actual)
@@ -1493,16 +1542,17 @@ class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
         expected = etree.XML(expected_str, parser=parser)
         self.assertXmlEqual(expected, actual)
 
-    @patch('xmodule.video_module.video_module.get_video_with_transcript_available')
-    def test_import_val_data(self, mock_get_video_with_transcript_available):
+    def test_import_val_data_internal(self):
         create_profile('mobile')
         module_system = DummySystem(load_error_modules=True)
-        mock_get_video_with_transcript_available.return_value = (False, 'test_edx_video_id')
 
         xml_data = """
             <video edx_video_id="test_edx_video_id">
                 <video_asset client_video_id="test_client_video_id" duration="111.0">
                     <encoded_video profile="mobile" url="http://example.com/video" file_size="222" bitrate="333"/>
+                    <transcripts video-id="test_edx_video_id">
+                        <transcript file_format="srt" file_name="ext101.srt" language_code="ar" provider="Cielo24"/>
+                    </transcripts>
                 </video_asset>
             </video>
         """
@@ -1519,12 +1569,40 @@ class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
         self.assertEqual(video_data['encoded_videos'][0]['url'], 'http://example.com/video')
         self.assertEqual(video_data['encoded_videos'][0]['file_size'], 222)
         self.assertEqual(video_data['encoded_videos'][0]['bitrate'], 333)
+        # verify transcript data
+        video_transcript = get_video_transcript(video.edx_video_id, 'ar')
+        for key, value in self.get_video_transcript_data('test_edx_video_id').items():
+            self.assertEqual(value, getattr(video_transcript, key))
 
-    @patch('xmodule.video_module.video_module.get_video_with_transcript_available')
-    def test_import_val_data_invalid(self, mock_get_video_with_transcript_available):
+    def test_import_val_data_external(self):
+        """
+        Tests video import with external video.
+        """
+        external_video_id = 'external_video_id'
+        module_system = DummySystem(load_error_modules=True)
+
+        xml_data = """
+            <video>
+                <video_asset>
+                    <transcripts video-id="{video_id}">
+                        <transcript file_format="srt" file_name="ext101.srt" language_code="ar" provider="Cielo24"/>
+                    </transcripts>
+                </video_asset>
+            </video>
+        """.format(video_id=external_video_id)
+
+        id_generator = Mock()
+        id_generator.target_course_id = "test_course_id"
+        self.descriptor.from_xml(xml_data, module_system, id_generator)
+
+        # verify transcript data
+        video_transcript = get_video_transcript(external_video_id, 'ar')
+        for key, value in self.get_video_transcript_data(external_video_id).items():
+            self.assertEqual(value, getattr(video_transcript, key))
+
+    def test_import_val_data_invalid(self):
         create_profile('mobile')
         module_system = DummySystem(load_error_modules=True)
-        mock_get_video_with_transcript_available.return_value = (False, 'test_edx_video_id')
 
         # Negative file_size is invalid
         xml_data = """

@@ -41,7 +41,9 @@ from xmodule.x_module import XModule, module_attr
 from xmodule.xml_module import deserialize_field, is_pointer_tag, name_to_pathname
 
 from .bumper_utils import bumperize
-from .transcripts_utils import Transcript, VideoTranscriptsMixin, get_html5_ids
+from .transcripts_utils import (
+    Transcript, VideoTranscriptsMixin, get_html5_ids, get_video_ids_info, NoVideoIdFoundError
+)
 from .video_handlers import VideoStudentViewHandlers, VideoStudioViewHandlers
 from .video_utils import create_youtube_string, format_xml_exception_message, get_poster, rewrite_video_url
 from .video_xfields import VideoFields
@@ -663,8 +665,8 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
                 xml.append(ele)
 
         if edxval_api:
-            external, video_id = get_video_with_transcript_available(self)
             try:
+                external, video_id = get_video_ids_info(self.edx_video_id, self.youtube_id_1_0, self.html5_sources)
                 xml.append(
                     edxval_api.export_to_xml(
                         video_id,
@@ -672,7 +674,7 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
                         external=external
                     )
                 )
-            except edxval_api.ValVideoNotFoundError:
+            except edxval_api.ValVideoNotFoundError, NoVideoIdFoundError:
                 pass
 
         # handle license specifically
@@ -877,20 +879,24 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
 
     def import_video_info_into_val(self, xml, course_id):
         """
-        Import parsed info from `xml` into edxval.
+        Import parsed video info from `xml` into edxval.
 
         Arguments:
             xml (lxml object): xml representation of video to be imported
             course_id (str): course id
         """
+        clean = lambda item: item.strip() if isinstance(item, basestring) else item
+
         video_asset_elem = xml.find('video_asset')
         if edxval_api and video_asset_elem is not None:
-            external, video_id = get_video_with_transcript_available(self)
+            # Always pass the edx_video_id, Whether the video is internal or external
+            # In case of external, we only need to import transcripts and for that
+            # purpose video id is already present in the xml
             edxval_api.import_from_xml(
                 video_asset_elem,
-                video_id,
+                self.edx_video_id,
                 course_id=course_id,
-                external=external
+                external=not bool(clean(self.edx_video_id))
             )
 
     def index_dictionary(self):
