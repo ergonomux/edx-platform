@@ -251,7 +251,11 @@ class VideoStudentViewHandlers(object):
                 # if no translation is required
                 response = self.get_static_transcript(request, transcripts)
                 if response.status_code == 404:
+                    # try to utilize s3 transcripts as a fallback
                     # TODO: Check for a course-specific role out feature flag first.
+                    if not edxval_api:
+                        return response
+
                     video_candidate_ids = get_video_ids_info(self.edx_video_id, self.youtube_id_1_0, self.html5_sources)
                     transcript = edxval_api.get_video_transcript(
                         video_ids=video_candidate_ids,
@@ -285,8 +289,13 @@ class VideoStudentViewHandlers(object):
                     transcripts, transcript_format=self.transcript_download_format, lang=lang
                 )
             except NotFoundError:
+
+                # try to utilize s3 transcripts as a fallback
                 # TODO: Check for a course-specific role out feature flag first.
                 response = Response(status=404)
+                if not edxval_api:
+                    return response
+
                 # Make sure the language is set.
                 if lang is None:
                     lang = self.get_default_transcript_language(transcripts)
