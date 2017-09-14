@@ -33,16 +33,14 @@ def generate_certificate(self, **kwargs):
             that the actual verification status is as expected before
             generating a certificate, in the off chance that the database
             has not yet updated with the user's new verification status.
-            status.
     """
     student = User.objects.get(id=kwargs.pop('student'))
     course_key = CourseKey.from_string(kwargs.pop('course_key'))
     expected_verification_status = kwargs.pop('expected_verification_status', None)
-    if not expected_verification_status:
-        generate_user_certificates(student=student, course_key=course_key, **kwargs)
-    else:
+
+    expected_verification_status = kwargs.pop('expected_verification_status', None)
+    if expected_verification_status:
         actual_verification_status, _ = SoftwareSecurePhotoVerification.user_status(student)
-        if expected_verification_status == actual_verification_status:
-            generate_user_certificates(student=student, course_key=course_key, **kwargs)
-        else:
-            self.retry(kwargs=kwargs)
+        if expected_verification_status != actual_verification_status:
+            raise self.retry(kwargs=kwargs)
+    generate_user_certificates(student=student, course_key=course_key, **kwargs)

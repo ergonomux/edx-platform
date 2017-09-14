@@ -42,9 +42,8 @@ class GenerateUserCertificateTest(TestCase):
             with self.assertRaisesRegexp(KeyError, missing_arg):
                 generate_certificate.apply_async(kwargs=kwargs).get()
 
-    @patch('lms.djangoapps.certificates.tasks.generate_certificate.retry')
     @patch('lms.djangoapps.certificates.tasks.generate_user_certificates')
-    def test_cert_task_retry(self, generate_user_certs_mock, mock_retry):
+    def test_cert_task_retry(self, generate_user_certs_mock):
         course_key = 'course-v1:edX+CS101+2017_T2'
         student = UserFactory()
 
@@ -55,6 +54,4 @@ class GenerateUserCertificateTest(TestCase):
         }
         generate_certificate.apply_async(kwargs=kwargs)
 
-        SoftwareSecurePhotoVerificationFactory.create(user=student, status='approved')
-
-        self.assertTrue(mock_retry.called)
+        generate_certificate.assert_called_with()

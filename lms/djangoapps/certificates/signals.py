@@ -58,7 +58,7 @@ def _listen_for_passing_grade(sender, user, course_id, **kwargs):  # pylint: dis
 
 
 @receiver(LEARNER_NOW_VERIFIED, dispatch_uid="learner_track_changed")
-def _listen_for_track_change(sender, user, **kwargs):  # pylint: disable=unused-argument
+def _listen_for_id_verification_status_changed(sender, user, **kwargs):  # pylint: disable=unused-argument
     """
     Catches a track change signal, determines user status,
     calls fire_ungenerated_certificate_task for passing grades
@@ -102,5 +102,5 @@ def fire_ungenerated_certificate_task(user, course_key, expected_verification_st
         }
         if expected_verification_status:
             kwargs['expected_verification_status'] = unicode(expected_verification_status)
-        generate_certificate.apply_async(kwargs=kwargs)
+        generate_certificate.apply_async(countdown=2, kwargs=kwargs)
         return True
