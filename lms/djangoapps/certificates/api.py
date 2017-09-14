@@ -488,44 +488,43 @@ def get_certificate_template(course_key, mode):
     """
     Retrieves the custom certificate template based on course_key and mode.
     """
-    org_id, template = None, None
+    org_id, template, course_language = None, None, None
+    
     # fetch organization of the course
     course_organization = get_course_organizations(course_key)
     if course_organization:
         org_id = course_organization[0]['id']
 
+    #if language specific templates enabled at site level (i'm not sure this IS a flag)
+    if CertificateGenerationCourseSetting.is_language_specific_templates_enabled(course_key):
+        #course_language = get_language_for_course_by_key(course_key) # Not sure how to do this quite yet
+        pass
+    # determine template sets. 
+
     active_templates = CertificateTemplate.objects.filter(is_active=True)
-
-    #if language specific templates enabled at site level
-    #if CertificateGenerationCourseSetting.is_language_specific_templates_enabled(course_key)
-        # course_language = get_language_for_course_by_key(course_key)
-        # active_templates = active_templates.filter(language=course_language)
-
-    org_and_mode_templates = active_templates.filter(
-        organization_id=org_id,
-        mode=mode,
-    )  
-
-    template_by_key = org_and_mode_templates.filter(course_key=course_key)
-    # if theres a course key and all deets template return it
-    if template_by_key
-        return template_by_key[0].template
-     
-    # no template by key, check org and mode templates
-    elif org_and_mode_templates
-        return org_and_mode_templates[0].template
-
-    # if no template with org and mode, find by only org
     org_templates = active_templates.filter(organization_id=org_id)
-    elif org_templates
-        return org_templates[0].template
-    
-    # if we still don't template find by only course mode
     mode_templates = active_templates.filter(mode=mode)
-    elif mode_templates
-        return mode_templates[0].template
+    org_and_mode_templates = org_templates & mode_templates # active_templates.filter(organization_id=org_id, mode=mode,)  
+    template_by_key = org_and_mode_templates.filter(course_key=course_key)
 
-    else 
+    # Look up templates from most specific to least specific. 
+    # if theres a template with correct course key and all details, return it
+    if template_by_key:
+        template_by_key = check_for_language_specific_template(template_by_key, course_language)
+        return template_by_key[0].template
+    # else check if there is a template with the correct org AND mode
+    elif org_and_mode_templates:
+        org_and_mode_templates = check_for_language_specific_template(org_and_mode_templates, course_language)
+        return org_and_mode_templates[0].template
+    # else check if there is a template with only correct org 
+    elif org_templates:
+        org_templates = check_for_language_specific_template(org_templates, course_language)
+        return org_templates[0].template
+    # else check if there is a template with only correct mode
+    elif mode_templates:
+        mode_templates = check_for_language_specific_template(mode_templates, course_language)
+        return mode_templates[0].template
+    else:  # There is no matching template
         return None
     # if org_id and mode:
     #     template = CertificateTemplate.objects.filter(
@@ -560,6 +559,13 @@ def get_certificate_template(course_key, mode):
     #     )
 
     # return template[0].template if template else None
+
+def check_for_language_specific_template(templates, language):
+    """
+    Checks if there is a template that matches the passed in language
+    """
+    language_templates = templates.filter(language=language) if language else None
+    return language_templates if language_templates else templates
 
 
 def emit_certificate_event(event_name, user, course_id, course=None, event_data=None):
