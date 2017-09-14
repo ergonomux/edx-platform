@@ -508,6 +508,10 @@ def get_certificate_template(course_key, mode):
     template_by_key = org_and_mode_templates.filter(course_key=course_key)
 
     # Look up templates from most specific to least specific. 
+    # At each level of specificity, check to see if there is a language specific templates
+    # If the course setting for language is off, check_for_language_specific_template will
+    # return the set of templates passed in
+    
     # if theres a template with correct course key and all details, return it
     if template_by_key:
         template_by_key = check_for_language_specific_template(template_by_key, course_language)
