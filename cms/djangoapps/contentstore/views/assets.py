@@ -137,6 +137,7 @@ def _assets_json(request, course_key):
 
     if request_options['requested_page'] > 0 and first_asset_to_display_index >= total_count:
         _update_options_to_requery_final_page(query_options, total_count)
+        current_page = query_options['current_page']
         first_asset_to_display_index = _get_first_asset_index(current_page, requested_page_size)
         assets, total_count = _get_assets_for_page(request, course_key, query_options)
 
@@ -314,19 +315,25 @@ def _get_assets_in_json_format(assets, course_key):
 @ensure_csrf_cookie
 @login_required
 def _upload_asset(request, course_key):
+    #import pdb;pdb.set_trace()
+
     '''
     This method allows for POST uploading of files into the course asset
     library, which will be supported by GridFS in MongoDB.
     '''
 
-    _check_course_exists(course_key)
+    check_1 = _check_course_exists(course_key)
+    if check_1 is not None:
+        return check_1
 
     file_metadata = _get_file_metadata_as_dictionary(request)
 
     # note that since the front-end may batch large file uploads in smaller chunks,
     # we validate the file-size on the front-end in addition to
     # validating on the backend (see cms/static/js/views/assets.js)
-    _check_upload_file_size(file_metadata)
+    check = _check_upload_file_size(file_metadata)
+    if check is not None:
+        return check
 
     content, temporary_file_path = _get_file_content_and_path(file_metadata, course_key)
 
@@ -400,7 +407,8 @@ def _check_upload_file_size(file_metadata):
     if upload_file_size > maximum_file_size_in_bytes:
         error_message = _get_file_too_large_error_message(filename)
         return JsonResponse({'error': error_message}, status=413)
-
+    #else:
+    #    return None
 
 def _get_file_too_large_error_message(filename):
 
