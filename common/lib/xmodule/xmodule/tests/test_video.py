@@ -646,7 +646,12 @@ class VideoDescriptorImportTestCase(unittest.TestCase):
         video = VideoDescriptor.from_xml(xml_data, module_system, id_generator)
 
         self.assert_attributes_equal(video, {'edx_video_id': 'test_edx_video_id'})
-        mock_val_api.import_from_xml.assert_called_once_with(ANY, 'test_edx_video_id', course_id='test_course_id')
+        mock_val_api.import_from_xml.assert_called_once_with(
+            ANY,
+            'test_edx_video_id',
+            course_id='test_course_id',
+            external=False
+        )
 
     @patch('xmodule.video_module.video_module.edxval_api')
     def test_import_val_data_invalid(self, mock_val_api):
@@ -673,11 +678,11 @@ class VideoExportTestCase(VideoDescriptorTestBase):
         """
         Test that we write the correct XML on export.
         """
-        def mock_val_export(edx_video_id, course_id, external=False):
+        def mock_val_export(video_ids, course_id, external=False):
             """Mock edxval.api.export_to_xml"""
             return etree.Element(
                 'video_asset',
-                attrib={'export_edx_video_id': edx_video_id}
+                attrib={'video_ids': str(video_ids)}
             )
 
         mock_val_api.export_to_xml = mock_val_export
@@ -707,7 +712,7 @@ class VideoExportTestCase(VideoDescriptorTestBase):
            <handout src="http://www.example.com/handout"/>
            <transcript language="ge" src="german_translation.srt" />
            <transcript language="ua" src="ukrainian_translation.srt" />
-           <video_asset export_edx_video_id="test_edx_video_id"/>
+           <video_asset video_ids="[u'test_edx_video_id', u'p2Q6BrNhdh8', 'source', 'source']"/>
          </video>
         '''
         expected = etree.XML(xml_string, parser=parser)
@@ -727,6 +732,7 @@ class VideoExportTestCase(VideoDescriptorTestBase):
         expected = etree.XML(xml_string, parser=parser)
         self.assertXmlEqual(expected, xml)
 
+    @patch('xmodule.video_module.video_module.edxval_api', None)
     def test_export_to_xml_empty_end_time(self):
         """
         Test that we write the correct XML on export.
@@ -755,6 +761,7 @@ class VideoExportTestCase(VideoDescriptorTestBase):
         expected = etree.XML(xml_string, parser=parser)
         self.assertXmlEqual(expected, xml)
 
+    @patch('xmodule.video_module.video_module.edxval_api', None)
     def test_export_to_xml_empty_parameters(self):
         """
         Test XML export with defaults.
@@ -764,6 +771,7 @@ class VideoExportTestCase(VideoDescriptorTestBase):
         expected = '<video url_name="SampleProblem" download_video="false"/>\n'
         self.assertEquals(expected, etree.tostring(xml, pretty_print=True))
 
+    @patch('xmodule.video_module.video_module.edxval_api', None)
     def test_export_to_xml_with_transcripts_as_none(self):
         """
         Test XML export with transcripts being overridden to None.
@@ -773,6 +781,7 @@ class VideoExportTestCase(VideoDescriptorTestBase):
         expected = '<video url_name="SampleProblem" download_video="false"/>\n'
         self.assertEquals(expected, etree.tostring(xml, pretty_print=True))
 
+    @patch('xmodule.video_module.video_module.edxval_api', None)
     def test_export_to_xml_invalid_characters_in_attributes(self):
         """
         Test XML export will *not* raise TypeError by lxml library if contains illegal characters.
@@ -782,6 +791,7 @@ class VideoExportTestCase(VideoDescriptorTestBase):
         xml = self.descriptor.definition_to_xml(None)
         self.assertEqual(xml.get('display_name'), 'DisplayName')
 
+    @patch('xmodule.video_module.video_module.edxval_api', None)
     def test_export_to_xml_unicode_characters(self):
         """
         Test XML export handles the unicode characters.
