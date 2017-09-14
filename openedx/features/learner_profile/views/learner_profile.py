@@ -53,11 +53,15 @@ def learner_profile(request, username):
                 request.COOKIES.get('dismiss-profile-message', '') != 'True'):
             PageLevelMessages.register_info_message(
                 request,
-                Text(_("We have been adding more information to the full version of your learner profile, \
-                        including your full name, social profile links, join date and certificates. If you \
-                        are uncomfortable sharing this information publicly, feel free to toggle your profile \
-                        visibility to 'Limited'. {dismiss_link}")).format(
-                    dismiss_link=HTML('<button class="btn-link dismiss-info-message">Dismiss</button>')
+                Text(_('Welcome to the new learner profile! When your profile visibility is set to "Full Profile", \
+                        other edX learners can now see your full name, the certificates you have earned, and when \
+                        you joined the edX community. You can also optionally add links to your social accounts from \
+                        the account settings page. If you would not like to share this information with other edX learners \
+                        switch to the "Limited Profile" option which only lets other edX learners see your \
+                        username and profile image. {dismiss_link}')).format(
+                    dismiss_link=HTML('<div><button class="btn-link dismiss-info-message">{dismiss_text}</button></div>').format(
+                        dismiss_text=Text(_("Dismiss"))
+                    )
                 )
             )
             dismiss_message = True
