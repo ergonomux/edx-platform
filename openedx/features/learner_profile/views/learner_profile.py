@@ -20,7 +20,7 @@ from openedx.core.djangoapps.util.user_messages import PageLevelMessages
 from openedx.core.djangolib.markup import HTML, Text
 from student.models import User
 
-from .. import SHOW_ACHIEVEMENTS_FLAG, BOOST_PROFILE_VISIBILITY
+from .. import SHOW_ACHIEVEMENTS_FLAG, SHOW_PROFILE_MESSAGE
 
 from learner_achievements import LearnerAchievementsFragmentView
 
@@ -47,31 +47,34 @@ def learner_profile(request, username):
     try:
         context = learner_profile_context(request, username, request.user.is_staff)
         # TODO: LEARNER-2554: 09/2017: Remove message and cookie logic when we no longer want this message
-        dismiss_message = False
+        message_viewed = False
         if (context['own_profile'] and
-                BOOST_PROFILE_VISIBILITY.is_enabled() and
-                request.COOKIES.get('dismiss-profile-message', '') != 'True'):
+                SHOW_PROFILE_MESSAGE.is_enabled() and
+                request.COOKIES.get('profile-message-viewed', '') != 'True'):
             PageLevelMessages.register_info_message(
                 request,
-                Text(_('Welcome to the new learner profile! When your profile visibility is set to "Full Profile", \
-                        other edX learners can now see your full name, the certificates you have earned, and when \
+                HTML('{dismiss_link}{message_text}').format(
+                    message_text=Text(_('Welcome to the new learner profile! When your profile visibility is set to "Full Profile", \
+                        other learners can now see your full name, the certificates you have earned, and when \
                         you joined the edX community. You can also optionally add links to your social accounts from \
                         the account settings page. If you would not like to share this information with other edX learners \
                         switch to the "Limited Profile" option which only lets other edX learners see your \
-                        username and profile image. {dismiss_link}')).format(
-                    dismiss_link=HTML('<div><button class="btn-link dismiss-info-message">{dismiss_text}</button></div>').format(
-                        dismiss_text=Text(_("Dismiss"))
+                        username and profile image.')),
+                    dismiss_link=HTML('<button style="float: right;" class="btn-link dismiss-info-message">'
+                                      '<span class="sr">{dismiss_text}</span>'
+                                      '<span class="icon fa fa-times" aria-hidden="true"></span></button>').format(
+                                          dismiss_text=Text(_("Dismiss"))
                     )
                 )
             )
-            dismiss_message = True
+            message_viewed = True
         response = render_to_response(
             'learner_profile/learner_profile.html',
             context
         )
 
-        if dismiss_message:
-            response.set_cookie('dismiss-profile-message', 'True')
+        if message_viewed:
+            response.set_cookie('profile-message-viewed', 'True')
         return response
     except (UserNotAuthorized, UserNotFound, ObjectDoesNotExist):
         raise Http404
