@@ -625,7 +625,7 @@ class VideoDescriptorImportTestCase(unittest.TestCase):
 
     @patch('xmodule.video_module.video_module.edxval_api')
     def test_import_val_data(self, mock_val_api):
-        def mock_val_import(xml, edx_video_id, course_id):
+        def mock_val_import(xml, edx_video_id, course_id, external=False):
             """Mock edxval.api.import_from_xml"""
             self.assertEqual(xml.tag, 'video_asset')
             self.assertEqual(dict(xml.items()), {'mock_attr': ''})
@@ -673,7 +673,7 @@ class VideoExportTestCase(VideoDescriptorTestBase):
         """
         Test that we write the correct XML on export.
         """
-        def mock_val_export(edx_video_id, course_id):
+        def mock_val_export(edx_video_id, course_id, external=False):
             """Mock edxval.api.export_to_xml"""
             return etree.Element(
                 'video_asset',
