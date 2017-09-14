@@ -38,10 +38,8 @@ from xmodule.video_module.transcripts_utils import (
     manage_video_subtitles_save,
     remove_subs_from_store,
     youtube_video_transcript_name,
-    get_html5_ids,
 )
-from xmodule.video_module.transcripts_utils import Transcript
-from xmodule.video_module.transcripts_utils import get_video_transcript_data
+from xmodule.video_module.transcripts_utils import get_video_ids_info, Transcript
 
 __all__ = [
     'upload_transcripts',
@@ -181,25 +179,20 @@ def download_transcripts(request):
     except NotFoundError:
         log.debug("Can't find content in storage for %s subs", subs_id)
         # Look for transcripts in VAL first.
-        video_transcript = get_video_transcript_data(item, lang_code=u'en')
-        if video_transcript:
-            # Read the transcript content
-            video_transcript.transcript.file.open(mode='rb')
-            transcript_sjson_content = video_transcript.transcript.file.read()
-            video_transcript.transcript.file.close()
+        video_candidate_ids = get_video_ids_info(item.edx_video_id, item.youtube_id_1_0, item.html5_sources)
+        transcript = edxval_api.get_video_transcript(video_ids=video_candidate_ids, language_code=u'en')
 
-            if transcript_sjson_content:
-                transcript_content = Transcript.convert(
-                    transcript_sjson_content,
-                    input_format='sjson',
-                    output_format='srt'
-                )
-
-                # Construct an HTTP response
-                filename = video_transcript.transcript.name.split('.')[0].encode('utf8')
-                response = HttpResponse(transcript_content, content_type='application/x-subrip; charset=utf-8')
-                response['Content-Disposition'] = 'attachment; filename="{filename}.srt"'.format(filename=filename)
-                return response
+        if transcript:
+            transcript_content = Transcript.convert(
+                transcript['content'],
+                input_format='sjson',
+                output_format='srt'
+            )
+            # Construct an HTTP response
+            filename = transcript['file_name'].split('.')[0].encode('utf8')
+            response = HttpResponse(transcript_content, content_type='application/x-subrip; charset=utf-8')
+            response['Content-Disposition'] = 'attachment; filename="{filename}.srt"'.format(filename=filename)
+            return response
 
         raise Http404
 
@@ -311,7 +304,8 @@ def check_transcripts(request):
 
     # Try searching in VAL for the transcript as a last resort.
     if command == 'not_found':
-        video_transcript = get_video_transcript_data(item, lang_code=u'en')
+        video_candidate_ids = get_video_ids_info(item.edx_video_id, item.youtube_id_1_0, item.html5_sources)
+        video_transcript = edxval_api.get_video_transcript(video_ids=video_candidate_ids, language_code=u'en')
         if video_transcript:
             command = 'found'
 
